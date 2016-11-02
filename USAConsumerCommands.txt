@@ -1,0 +1,68 @@
+Export Dataaset into HDFS using Flume
+
+
+
+flume-ng agent --conf-file /usr/lib/flume-ng/conf/usacrime1.conf --name agent1 -Dflume.root.logger=INFO,console
+
+
+
+A = load '/user/acadgild/cleaned/
+' using PigStorage(',') as (Datereceived:chararray,Product:chararray,Sub_product:chararray,Issue:chararray,Sub_issue:chararray,
+Consumercomplaintnarrative:chararray,Companypublicresponse:chararray,Company:chararray,State:chararray,ZIP_code:chararray,
+Submitted_via:chararray,Date_senttocompany:chararray,Company_responsetoconsumer:chararray,Timely_response:chararray,
+Consumer_disputed:chararray,Complaint_ID:int);
+
+
+
+1. Write a pig script to find no of complaints which got timely response
+
+
+
+	B = FILTER A BY Timely_response == 'Yes';
+
+
+
+
+2. Write a pig script to find no of complaints where consumer forum forwarded the complaint same day they received to respective company
+
+
+
+	B = Filter A by Datereceived ==  Date_senttocompany;
+
+
+
+3. Write a pig script to find list of companies toping in complaint chart (companies with maximum number of complaints)
+
+
+
+
+	B = Foreach A Generate Company;
+
+	C = Group B by Company;
+
+	sample1 = Foreach C generate flatten(group) as company, COUNT(B.Company) as tot_points;
+
+	groupcomp = group sample1 by company;
+
+	max_data = foreach groupcomp generate group as company,MAX(sample1.tot_points) as total;
+
+
+
+
+4. Write a pig script to find no of complaints filed with product type has &quot;Debt collection&quot; for the year 2015
+
+
+
+	B = Filter A by Datereceived MATCHES '.*2015.*';
+	
+C = Filter B by Product == 'Debt collection';
+
+
+
+STORE C INTO '/user/acadgild/proj2_Output.txt' using PigDump('\t');
+
+
+
+Export the data into Mysql using Sqoop
+
+sqoop export --connect jdbc:mysql://localhost/demodb --table usacrime --export-dir /user/flume/usacrime/Consumer_Complaints1.csv --fields-terminated-by ',' --username root --password pass@123
